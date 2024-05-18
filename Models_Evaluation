@@ -1,0 +1,32 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+accuracy_scores = [0.8566393958464443,  # GRU
+                   0.7018250471994966,  # Decision Tree
+                   0.8518565135305224,  # Naive Bayes
+                   0.8891126494650724]  # Logistic Regression
+
+conf_intervals = [(0.841, 0.872),  # GRU
+                  (0.687, 0.716),  # Decision Tree
+                  (0.846, 0.857),  # Naive Bayes
+                  (0.882, 0.896)]  # Logistic Regression
+
+lower_bounds = [score - conf[0] for score, conf in zip(accuracy_scores, conf_intervals)]
+upper_bounds = [conf[1] - score for score, conf in zip(accuracy_scores, conf_intervals)]
+
+model_names = ['GRU', 'Decision Tree', 'Naive Bayes', 'Logistic Regression']
+mean_accuracy = np.mean(accuracy_scores)
+
+plt.figure(figsize=(10, 6))
+plt.bar(model_names, accuracy_scores, color=['blue', 'green', 'orange', 'red'])
+
+plt.errorbar(model_names, accuracy_scores, yerr=[lower_bounds, upper_bounds], fmt='o', color='black', capsize=5)
+
+plt.axhline(y=mean_accuracy, color='gray', linestyle='--', label='Mean Accuracy')
+plt.title('Model Comparison')
+plt.xlabel('Model')
+plt.ylabel('Accuracy')
+plt.ylim(0.6, 0.95)
+plt.legend()
+plt.tight_layout()
+plt.show()
