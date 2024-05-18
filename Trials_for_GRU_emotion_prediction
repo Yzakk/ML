@@ -1,0 +1,534 @@
+
+# Define emotion lexicon (example)
+emotion_lexicon = {
+    'happy': ['happy', 'joyful', 'excited'],
+    'sad': ['sad', 'depressed', 'gloomy'],
+    'angry': ['angry', 'irritated', 'frustrated']
+}
+
+# Function to assign emotion labels based on emotion lexicon
+def assign_emotion_labels(text):
+    emotion_labels = []
+    for word in text.split():
+        for emotion, keywords in emotion_lexicon.items():
+            if word in keywords:
+                emotion_labels.append(emotion)
+    return emotion_labels
+
+# Assign emotion labels to reviews
+data['emotion'] = data['text'].apply(assign_emotion_labels)
+
+# Prepare data for emotion classification
+X_emotion = data['text'].values
+y_emotion = data['emotion'].values
+
+# Tokenize text for emotion classification
+tokenizer.fit_on_texts(X_emotion)
+X_emotion_sequences = tokenizer.texts_to_sequences(X_emotion)
+X_emotion_padded = pad_sequences(X_emotion_sequences, maxlen=max_seq_length)
+
+# Split data into training and testing sets for emotion classification
+X_emotion_train, X_emotion_test, y_emotion_train, y_emotion_test = train_test_split(X_emotion_padded, y_emotion, test_size=0.2, random_state=42)
+
+# Define GRU model architecture for emotion classification
+emotion_model = tf.keras.Sequential([
+    tf.keras.layers.Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100, input_length=max_seq_length),
+    tf.keras.layers.GRU(units=64),
+    tf.keras.layers.Dense(units=len(emotion_lexicon), activation='softmax')  # Adjust units for number of emotions
+])
+
+# Compile emotion classification model
+emotion_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train emotion classification model
+emotion_model.fit(X_emotion_train, y_emotion_train, epochs=5, batch_size=64, validation_data=(X_emotion_test, y_emotion_test))
+
+# Evaluate emotion classification model performance
+loss, accuracy = emotion_model.evaluate(X_emotion_test, y_emotion_test)
+print("Emotion Classification Test Loss:", loss)
+print("Emotion Classification Test Accuracy:", accuracy)
+
+y_sentiment_pred_prob = sentiment_model.predict(X_test)
+y_sentiment_pred = np.round(y_sentiment_pred_prob).astype(int)
+
+# Function to assign emotion labels based on emotion lexicon
+def assign_emotion_labels(text):
+    emotion_labels = []
+    for word in text.split():
+        for emotion, keywords in emotion_lexicon.items():
+            if word in keywords:
+                emotion_labels.append(emotion)
+    return emotion_labels
+
+# Assign emotion labels to reviews
+data['emotion'] = data['text'].apply(assign_emotion_labels)
+
+# Convert lists of emotion labels into binary indicator arrays
+from sklearn.preprocessing import MultiLabelBinarizer
+mlb = MultiLabelBinarizer()
+y_emotion_encoded = mlb.fit_transform(data['emotion'])
+
+# Tokenize text reviews for emotion classification
+X_emotion_sequences = tokenizer.texts_to_sequences(X)
+X_emotion_padded = pad_sequences(X_emotion_sequences, maxlen=max_seq_length)
+
+# Split data into training and testing sets for emotion classification
+X_emotion_train, X_emotion_test, y_emotion_train, y_emotion_test = train_test_split(X_emotion_padded, y_emotion_encoded, test_size=0.2, random_state=42)
+
+# Define emotion classification model architecture
+emotion_model = tf.keras.Sequential([
+    tf.keras.layers.Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100, input_length=max_seq_length),
+    tf.keras.layers.GRU(units=64),
+    tf.keras.layers.Dense(units=len(mlb.classes_), activation='sigmoid')
+])
+
+# Compile emotion classification model
+emotion_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Train emotion classification model
+emotion_model.fit(X_emotion_train, y_emotion_train, epochs=2, batch_size=64, validation_data=(X_emotion_test, y_emotion_test))
+
+# Evaluate emotion classification model performance
+loss, accuracy = emotion_model.evaluate(X_emotion_test, y_emotion_test)
+print("Emotion Classification Test Loss:", loss)
+print("Emotion Classification Test Accuracy:", accuracy)
+
+# Save the extended dataset with emotion labels to a CSV file
+data.to_csv('extended_dataset.csv', index=False)
+
+
+# In[34]:
+
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MultiLabelBinarizer
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Embedding, GRU, Dense
+
+data = pd.read_csv('D:/Uni/Data Science/ML Module/movie.csv')
+
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts(data['text'])
+X_sequences = tokenizer.texts_to_sequences(data['text'])
+max_seq_length = 100
+X_padded = pad_sequences(X_sequences, maxlen=max_seq_length)
+
+X = X_padded
+y_sentiment = data['label'].values
+
+X_train, X_test, y_sentiment_train, y_sentiment_test = train_test_split(X, y_sentiment, test_size=0.2, random_state=42)
+
+sentiment_input = Input(shape=(max_seq_length,))
+embedding_layer = Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100)(sentiment_input)
+gru_layer = GRU(units=64)(embedding_layer)
+sentiment_output = Dense(units=1, activation='sigmoid')(gru_layer)
+sentiment_model = Model(inputs=sentiment_input, outputs=sentiment_output)
+
+sentiment_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+sentiment_model.fit(X_train, y_sentiment_train, epochs=3, batch_size=64, validation_data=(X_test, y_sentiment_test))
+
+y_emotion = data['emotion']
+
+mlb = MultiLabelBinarizer()
+y_emotion_encoded = mlb.fit_transform(y_emotion)
+
+X_emotion_train, X_emotion_test, y_emotion_train, y_emotion_test = train_test_split(X, y_emotion_encoded, test_size=0.2, random_state=42)
+
+emotion_input = Input(shape=(max_seq_length,))
+embedding_layer = Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100)(emotion_input)
+gru_layer = GRU(units=64)(embedding_layer)
+emotion_output = Dense(units=len(mlb.classes_), activation='sigmoid')(gru_layer)
+emotion_model = Model(inputs=emotion_input, outputs=emotion_output)
+
+emotion_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+emotion_model.fit(X_emotion_train, y_emotion_train, epochs=3, batch_size=64, validation_data=(X_emotion_test, y_emotion_test))
+
+loss, accuracy = emotion_model.evaluate(X_emotion_test, y_emotion_test)
+print("Emotion Classification Test Loss:", loss)
+print("Emotion Classification Test Accuracy:", accuracy)
+
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import classification_report
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, GRU, Dense
+
+
+# Expand emotion dictionary
+emotion_keywords = {
+    'happy': ['happy', 'joy', 'satisfied', 'pleased', 'positive', 'cheerful', 'content', 'delighted'],
+    'sad': ['sad', 'disappointed', 'melancholy', 'heartbroken', 'grief', 'depressed', 'unhappy', 'mournful'],
+    'excited': ['excited', 'enthusiastic', 'eager', 'thrilled', 'anticipation', 'energetic', 'passionate'],
+    'angry': ['angry', 'frustrated', 'irritated', 'outraged', 'hostile', 'furious', 'aggressive'],
+    'fearful': ['fearful', 'scared', 'terrified', 'anxious', 'nervous', 'panicked', 'worried'],
+    'surprised': ['surprised', 'astonished', 'amazed', 'shocked', 'startled', 'stupefied', 'astounded'],
+    'disgusted': ['disgusted', 'revolted', 'repulsed', 'nauseated', 'abhorred', 'appalled', 'offended'],
+    'calm': ['calm', 'relaxed', 'peaceful', 'serene', 'tranquil', 'composed', 'placid'],
+    'hopeful': ['hopeful', 'optimistic', 'confident', 'encouraged', 'expectant', 'upbeat', 'positive'],
+    'bored': ['bored', 'uninterested', 'apathetic', 'indifferent', 'dull', 'tedious', 'mundane'],
+    'amused': ['amused', 'entertained', 'joyful', 'pleasurable', 'lively', 'spirited', 'playful'],
+    'nostalgic': ['nostalgic', 'sentimental', 'wistful', 'longing', 'homesick', 'reminiscent', 'yearning'],
+    'anxious': ['anxious', 'worried', 'nervous', 'apprehensive', 'uneasy', 'panicked', 'fearful'],
+    'grateful': ['grateful', 'thankful', 'appreciative', 'indebted', 'obliged', 'acknowledging', 'graceful'],
+    'confused': ['confused', 'bewildered', 'puzzled', 'perplexed', 'disoriented', 'muddled', 'uncertain'],
+    'envious': ['envious', 'jealous', 'resentful', 'covetous', 'greedy', 'grudging', 'spiteful'],
+    'hopeless': ['hopeless', 'desperate', 'forlorn', 'doomed', 'futile', 'despondent', 'powerless'],
+    'elated': ['elated', 'ecstatic', 'overjoyed', 'thrilled', 'delighted', 'euphoric', 'jubilant'],
+    'optimistic': ['optimistic', 'hopeful', 'positive', 'confident', 'cheerful', 'upbeat', 'encouraged'],
+    'terrified': ['terrified', 'frightened', 'panicked', 'alarmed', 'scared', 'horrified', 'petrified'],
+    'stressed': ['stressed', 'anxious', 'overwhelmed', 'tense', 'worried', 'strained', 'pressured'],
+    # Add more emotions and associated keywords as needed
+}
+
+# Function to assign emotion labels based on emotion lexicon
+def assign_emotion_labels(text):
+    emotion_labels = []
+    for word in text.split():
+        for emotion, keywords in emotion_keywords.items():
+            if word in keywords:
+                emotion_labels.append(emotion)
+    return list(set(emotion_labels))  # Return unique emotion labels
+
+# Assign emotion labels to reviews
+data['emotion'] = data['text'].apply(assign_emotion_labels)
+
+# Convert lists of emotion labels into binary indicator arrays
+mlb = MultiLabelBinarizer()
+y_emotion_encoded = mlb.fit_transform(data['emotion'])
+
+# Predict emotions for test data
+y_emotion_pred_prob = emotion_model.predict(X_emotion_test)
+y_emotion_pred = (y_emotion_pred_prob > 0.5).astype(int)
+
+# Decode predicted emotion labels
+y_emotion_pred_labels = mlb.inverse_transform(y_emotion_pred)
+print("Predicted Emotion Labels:")
+for label in y_emotion_pred_labels[:10]:  # Print first 10 predicted labels
+    print(label)
+
+emotion_model.to_csv('movie_with_emotions.csv', index=False)
+
+data = pd.read_csv('D:/Uni/Data Science/ML Module/movie_filtered.csv')
+
+# Create a SentimentIntensityAnalyzer object
+analyzer = SentimentIntensityAnalyzer()
+
+# Function to assign sentiment description based on sentiment scores
+def assign_sentiment_description(text):
+    # Get sentiment scores
+    scores = analyzer.polarity_scores(text)
+    
+    # Define thresholds for sentiment scores
+    threshold_joy = 0.2
+    threshold_sadness = -0.2
+    threshold_anger = -0.5
+    threshold_surprise = 0.5
+    
+    # Determine sentiment label based on compound score
+    if scores['compound'] >= threshold_joy:
+        return 'joyful'
+    elif scores['compound'] <= threshold_sadness:
+        return 'sad'
+    elif scores['compound'] <= threshold_anger:
+        return 'angry'
+    elif scores['compound'] >= threshold_surprise:
+        return 'surprised'
+    else:
+        return 'neutral'
+
+# Apply sentiment analysis to each review and add sentiment description as a new column
+data['sentiment_description'] = data['text'].apply(assign_sentiment_description)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Add predicted sentiment description as a new column
+data['sentiment'] = data['text'].apply(assign_sentiment_description)
+
+# Save the modified DataFrame to a CSV file
+data.to_csv('added_sentiment_data.csv', index=False)
+
+pip install spacy
+
+
+
+python -m spacy download en_core_web_sm
+
+import pandas as pd
+import spacy
+
+# Load spaCy's pre-trained model
+model_path = 'C:/Users/youse/Downloads/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0/en_core_web_sm/en_core_web_sm-3.0.0'
+nlp = spacy.load(model_path)
+data = pd.read_csv('D:/Uni/Data Science/ML Module/movie_filtered.csv')
+
+# Emotion keywords
+emotion_keywords = {
+    'anticipation': ['anticipation', 'expectation', 'hope', 'excitement'],
+    'sadness': ['sadness', 'sorrow', 'grief', 'depression'],
+    'disgust': ['disgust', 'revulsion', 'repulsion', 'aversion'],
+    'joy': ['joy', 'happiness', 'pleasure', 'delight'],
+    'fear': ['fear', 'anxiety', 'dread', 'terror'],
+    'optimism': ['optimism', 'hopefulness', 'confidence', 'positivity'],
+    'anger': ['anger', 'rage', 'outrage', 'fury'],
+    'surprise': ['surprise', 'astonishment', 'amazement', 'shock']
+}
+
+# Analyze each text and predict emotion
+predicted_emotions = []
+for text in data['text']:
+    text_doc = nlp(text.lower())
+    emotion_scores = {emotion: 0.0 for emotion in emotion_keywords.keys()}
+    for token in text_doc:
+        for emotion, keywords in emotion_keywords.items():
+            for keyword in keywords:
+                if token.text.lower() == keyword:
+                    emotion_scores[emotion] += 1.0
+    predicted_emotion = max(emotion_scores, key=emotion_scores.get)
+    predicted_emotions.append(predicted_emotion)
+
+# Add predicted emotions to the DataFrame
+data['predicted_emotion'] = predicted_emotions
+
+# Display the DataFrame
+print(data[['text', 'predicted_emotion']])
+
+# Write the DataFrame to a CSV file
+data.to_csv('predicted_emotions_success.csv', index=False)
+
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import GRU, Embedding, Dense, SpatialDropout1D
+from tensorflow.keras.callbacks import EarlyStopping
+
+# Emotion keywords
+emotion_keywords = {
+    'happy': ['happy', 'joy', 'satisfied', 'pleased', 'positive', 'cheerful', 'content', 'delighted'],
+    'sad': ['sad', 'disappointed', 'melancholy', 'heartbroken', 'grief', 'depressed', 'unhappy', 'mournful'],
+    'excited': ['excited', 'enthusiastic', 'eager', 'thrilled', 'anticipation', 'energetic', 'passionate'],
+    'angry': ['angry', 'frustrated', 'irritated', 'outraged', 'hostile', 'furious', 'aggressive'],
+    'fearful': ['fearful', 'scared', 'terrified', 'anxious', 'nervous', 'panicked', 'worried'],
+    'surprised': ['surprised', 'astonished', 'amazed', 'shocked', 'startled', 'stupefied', 'astounded'],
+    'disgusted': ['disgusted', 'revolted', 'repulsed', 'nauseated', 'abhorred', 'appalled', 'offended'],
+    'calm': ['calm', 'relaxed', 'peaceful', 'serene', 'tranquil', 'composed', 'placid'],
+    # Add more emotions and associated keywords as needed
+}
+
+# Step 1: Load the IMDb Reviews Dataset
+data = pd.read_csv('D:/Uni/Data Science/ML Module/movie_filtered.csv')
+
+# Step 2: Preprocessing
+X = data['text']
+y = data['label']
+
+# Step 2.1: Define function to map text to emotions
+def map_text_to_emotion(text):
+    for emotion, keywords in emotion_keywords.items():
+        for keyword in keywords:
+            if keyword in text.lower():
+                return emotion
+    return 'neutral'  # If no emotion keyword is found, classify as neutral
+
+# Step 2.2: Map text to emotions
+y_emotion = X.map(map_text_to_emotion)
+
+# Step 3: Tokenization
+max_features = 5000  # Maximum number of words to keep
+maxlen = 100  # Maximum length of sequences
+tokenizer = Tokenizer(num_words=max_features)
+tokenizer.fit_on_texts(X)
+X_seq = tokenizer.texts_to_sequences(X)
+X_pad = pad_sequences(X_seq, maxlen=maxlen)
+
+# Step 4: Splitting the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_pad, y_emotion, test_size=0.2, random_state=42)
+
+# Step 5: Build the GRU Model
+num_emotions = len(emotion_keywords)
+model = Sequential()
+model.add(Embedding(input_dim=max_features, output_dim=128, input_length=maxlen))
+model.add(SpatialDropout1D(0.2))
+model.add(GRU(units=64, dropout=0.2, recurrent_dropout=0.2))
+model.add(Dense(num_emotions, activation='softmax'))  # Output layer with number of emotions
+
+
+
+# Compile the model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Print model summary
+print(model.summary())
+
+# Step 6: Train the Model
+batch_size = 128
+epochs = 10
+early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+history = model.fit(X_train, pd.get_dummies(y_train), epochs=epochs, batch_size=batch_size, 
+                    validation_split=0.1, callbacks=[early_stopping])
+
+# Step 7: Evaluate the Model
+y_pred = model.predict(X_test)
+y_pred_labels = np.argmax(y_pred, axis=1)
+accuracy = accuracy_score(y_test, y_pred_labels)
+print("Accuracy:", accuracy)
+print(classification_report(y_test, y_pred_labels))
+
+
+# Compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Print model summary
+print(model.summary())
+
+
+batch_size = 128
+epochs = 5
+early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, 
+                    validation_split=0.1, callbacks=[early_stopping])
+
+# Step 7: Evaluate the Model
+y_pred = (model.predict(X_test) > 0.5).astype("int32")
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+print(classification_report(y_test, y_pred))
+
+import pandas as pd
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, GRU, Dense
+from sklearn.model_selection import train_test_split
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+# Load dataset
+data = pd.read_csv('D:/Uni/Data Science/ML Module/movie_filtered.csv')
+
+# Create a SentimentIntensityAnalyzer object
+analyzer = SentimentIntensityAnalyzer()
+
+# Function to assign sentiment description based on sentiment scores
+def assign_sentiment_description(text):
+    # Get sentiment scores
+    scores = analyzer.polarity_scores(text)
+    
+    # Define thresholds for sentiment scores
+    threshold_joy = 0.2
+    threshold_sadness = -0.2
+    threshold_anger = -0.5
+    threshold_surprise = 0.5
+    
+    # Determine sentiment label based on compound score
+    if scores['compound'] >= threshold_joy:
+        return 'joyful'
+    elif scores['compound'] <= threshold_sadness:
+        return 'sad'
+    elif scores['compound'] <= threshold_anger:
+        return 'angry'
+    elif scores['compound'] >= threshold_surprise:
+        return 'surprised'
+    else:
+        return 'neutral'
+
+# Apply sentiment analysis to each review and add sentiment description as a new column
+data['sentiment_description'] = data['text'].apply(assign_sentiment_description)
+
+# Tokenize text reviews
+tokenizer = Tokenizer(num_words=5000)
+tokenizer.fit_on_texts(data['text'])
+X_sequences = tokenizer.texts_to_sequences(data['text'])
+X_padded = pad_sequences(X_sequences, maxlen=100)
+
+# Define features (padded sequences) and labels (sentiment)
+X = X_padded
+y = data['label']
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define GRU model architecture
+gru_model = Sequential([
+    Embedding(input_dim=5000, output_dim=100, input_length=100),
+    GRU(units=64),
+    Dense(units=1, activation='sigmoid')
+])
+
+# Compile GRU model
+gru_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Train GRU model
+gru_model.fit(X_train, y_train, epochs=5, batch_size=64, validation_data=(X_test, y_test))
+
+pip install spacy
+python -m spacy download en_core_web_sm
+
+import pandas as pd
+import spacy
+
+# Load spaCy's pre-trained model
+model_path = 'C:/Users/youse/Downloads/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0/en_core_web_sm/en_core_web_sm-3.0.0'
+nlp = spacy.load(model_path)
+# Read the dataset
+data = pd.read_csv('D:/Uni/Data Science/ML Module/movie_filtered.csv')
+
+# Emotion keywords
+emotion_keywords = {
+    'anticipation': ['anticipation', 'expectation', 'hope', 'excitement'],
+    'sadness': ['sadness', 'sorrow', 'grief', 'depression'],
+    'disgust': ['disgust', 'revulsion', 'repulsion', 'aversion'],
+    'joy': ['joy', 'happiness', 'pleasure', 'delight'],
+    'fear': ['fear', 'anxiety', 'dread', 'terror'],
+    'optimism': ['optimism', 'hopefulness', 'confidence', 'positivity'],
+    'anger': ['anger', 'rage', 'outrage', 'fury'],
+    'surprise': ['surprise', 'astonishment', 'amazement', 'shock']
+}
+
+# Analyze each text and predict emotion
+predicted_emotions = []
+for text in data['text']:
+    text_doc = nlp(text.lower())
+    emotion_scores = {emotion: 0.0 for emotion in emotion_keywords.keys()}
+    for token in text_doc:
+        for emotion, keywords in emotion_keywords.items():
+            for keyword in keywords:
+                if token.text.lower() == keyword:
+                    emotion_scores[emotion] += 1.0
+    predicted_emotion = max(emotion_scores, key=emotion_scores.get)
+    predicted_emotions.append(predicted_emotion)
+
+# Add predicted emotions to the DataFrame
+data['predicted_emotion'] = predicted_emotions
+
+# Display the DataFrame
+print(data[['text', 'predicted_emotion']])
+
+                                     text predicted_emotion
+0      I grew up (b. 1965) watching and loving the Th...      anticipation
+1      When I put this movie in my DVD player, and sa...          surprise
+2      Why do people who do not know what a particula...      anticipation
+3      Even though I have great interest in Biblical ...      anticipation
+4      Im a die hard Dads Army fan and nothing will e...      anticipation
+...                                                  ...               ...
+39718  "Western Union" is something of a forgotten cl...      anticipation
+39719  This movie is an incredible piece of work. It ...      anticipation
+39720  My wife and I watched this movie because we pl...      anticipation
+39721  When I first watched Flatliners, I was amazed....      anticipation
+39722  Why would this film be so good, but only gross...      anticipation
