@@ -1,0 +1,108 @@
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split
+import numpy as np
+import pandas as pd
+import matplotlib as plt
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+data = pd.read_csv('D:/Uni/Data Science/ML Module/movie.csv')
+
+data
+
+data.info()
+
+data.drop_duplicates(inplace=True)
+
+data
+
+data.describe()
+
+data.to_csv('movie_filtered.csv', index=False)
+
+data1 = pd.read_csv('C:/Users/youse/Downloads/Movies_Reviews_modified_version1.csv')
+
+data1['emotion'].unique()
+
+pip install wordcloud
+
+duplicates_count = data.duplicated().sum()
+print(f"Number of duplicate rows: {duplicates_count}")
+
+duplicated_rows = data[data.duplicated()]
+print("\nDuplicated Rows:")
+duplicated_rows
+
+
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+# Combine all text data into a single string
+all_text = ' '.join(data['text'])
+
+# Generate a word cloud
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(all_text)
+
+# Display the word cloud
+plt.figure(figsize=(10, 6))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.show()
+
+
+
+# Calculate the length of each review
+review_lengths = data['text'].apply(lambda x: len(x.split()))
+
+# Plot the distribution of review lengths
+plt.figure(figsize=(8, 5))
+plt.hist(review_lengths, bins=50, color='skyblue', edgecolor='black')
+plt.xlabel('Review Length')
+plt.ylabel('Frequency')
+plt.title('Distribution of Review Lengths')
+plt.grid(True)
+plt.show()
+
+
+
+plt.figure(figsize=(6, 4))
+data['label'].value_counts().plot(kind='bar', color=['skyblue', 'salmon'])
+plt.xlabel('Sentiment Label')
+plt.ylabel('Count')
+plt.title('Distribution of Sentiment Labels')
+plt.xticks(rotation=0)
+plt.show()
+
+
+# Count positive and negative reviews
+positive_count = data['label'].value_counts()[1]
+negative_count = data['label'].value_counts()[0]
+
+print("Number of positive reviews:", positive_count)
+print("Number of negative reviews:", negative_count)
+
+from collections import Counter
+
+# Separate positive and negative reviews
+positive_reviews = data[data['label'] == 1]['text']
+negative_reviews = data[data['label'] == 0]['text']
+
+# Function to get the most common words
+def get_most_common_words(reviews, n=10):
+    words = ' '.join(reviews).split()
+    word_count = Counter(words)
+    return word_count.most_common(n)
+
+# Get most common words for positive reviews
+print("Most common words in positive reviews:")
+print(get_most_common_words(positive_reviews))
+
+# Get most common words for negative reviews
+print("Most common words in negative reviews:")
+print(get_most_common_words(negative_reviews))
+
+
+
